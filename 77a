@@ -7,7 +7,7 @@ if game.PlaceId == 142823291 then
 
 elseif game.PlaceId == 79546208627805 or game.PlaceId == 126509999114328 then
     -- 99 Night in the Forest
-    loadstring(game:HttpGet("https://github.com/kokakola1234523/2215/blob/main/7264799nig"))()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/kokakola1234523/2215/refs/heads/main/7264799nig"))()
 
 elseif UniverseID == 97598239454123 or game.PlaceId == 126987765280963 then
     -- Grow a Garden
