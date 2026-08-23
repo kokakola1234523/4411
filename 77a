@@ -1,0 +1,19 @@
+local HttpService = game:GetService("HttpService")
+local UniverseID = game.GameId -- វិធីងាយស្រួល និងរហ័សដើម្បីយក Universe ID
+
+if game.PlaceId == 142823291 then
+    -- Murder Mystery 2
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Mengkimheng/MurderMystery2/refs/heads/main/2BK2"))()
+
+elseif game.PlaceId == 79546208627805 or game.PlaceId == 126509999114328 then
+    -- 99 Night in the Forest
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Mengkimheng/99nightintheforest/refs/heads/main/99nigh"))()
+
+elseif UniverseID == 97598239454123 or game.PlaceId == 126987765280963 then
+    -- Grow a Garden
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Mengkimheng/growgarden2/refs/heads/main/2BK2."))()
+
+else
+    -- ករណីចូលហ្គេមផ្សេងៗ
+    print("មិនមាន Script សម្រាប់ហ្គេមនេះទេ!")
+end
