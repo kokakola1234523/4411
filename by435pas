@@ -1,0 +1,52 @@
+local Players = game:GetService("Players")
+local localPlayer = Players.LocalPlayer
+
+-- ==========================================
+-- ១. លុប BreakableBlocks ចេញពី PlayerScripts
+-- ==========================================
+local playerScripts = localPlayer:WaitForChild("PlayerScripts")
+local gameFolder = playerScripts:WaitForChild("Game", 5)
+local obbyStages = gameFolder and gameFolder:WaitForChild("ObbyStages", 5)
+
+if obbyStages then
+	local breakableBlocks = obbyStages:FindFirstChild("BreakableBlocks")
+	if breakableBlocks then
+		breakableBlocks:Destroy()
+		print("✅ បានលុប BreakableBlocks ចេញពី PlayerScripts រួចរាល់!")
+	else
+		warn("❌ រកមិនឃើញ BreakableBlocks នៅក្នុង ObbyStages ទេ!")
+	end
+else
+	warn("❌ រកមិនឃើញ Path Game.ObbyStages នៅក្នុង PlayerScripts ទេ!")
+end
+
+-- ==========================================
+-- ២. Function សម្រាប់លុប Humanoid ចេញពី Character
+-- ==========================================
+local function destroyHumanoid(char)
+	local humanoid = char:WaitForChild("Humanoid", 5)
+	if humanoid then
+		humanoid:Destroy()
+		print("✅ បានលុប Humanoid រួចរាល់!")
+	end
+end
+
+-- ករណី Character មានស្រាប់ស្រេច (ពេលរត់ Script ដំបូង)
+if localPlayer.Character then
+	destroyHumanoid(localPlayer.Character)
+end
+
+-- ករណី Character Respawn ថ្មី (CharacterAdded)
+localPlayer.CharacterAdded:Connect(destroyHumanoid)
+
+-- ==========================================
+-- ៣. Rayfield UI Integration (ប៊ូតុង Reset Character)
+-- ==========================================
+tab:CreateButton({
+    name = "Reset Character",
+    callback = function()
+        if game.Players.LocalPlayer.Character then
+            game.Players.LocalPlayer.Character:BreakJoints()
+        end
+    end,
+})
