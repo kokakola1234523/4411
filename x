@@ -32,12 +32,13 @@ local function optimizeObject(v)
     end
 end
 
--- Global States (លុប AutoMonsterEgg ចេញ)
+-- Global States
 getgenv().AutoInteract = false
 getgenv().AutoBigEgg = false
 getgenv().AutoPartFarm = false
 getgenv().AutoRainbowEgg = false
 getgenv().AutoTreadmill = false
+getgenv().FlySpeed = 600
 
 -- Configuration
 local COLOR_BIGGEST = Color3.fromRGB(255, 0, 128)
@@ -193,7 +194,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- 3. Volume ESP System
+-- 3. Volume ESP System & 4. Multi-Part ESP System (រក្សាទុកដូចដើម)
 local function getEggSize(slot)
     local targetPart = slot:FindFirstChild("Hitbox", true) or (slot:IsA("BasePart") and slot or slot:FindFirstChildWhichIsA("BasePart", true))
     if targetPart then
@@ -203,66 +204,6 @@ local function getEggSize(slot)
     return 0, nil
 end
 
-local function updateEggESP()
-    local areaEggSlotsClient = Workspace:FindFirstChild("AreaEggSlotsClient")
-    if not areaEggSlotsClient then return end
-    local slots = areaEggSlotsClient:GetChildren()
-    local maxVolume = -1
-    local biggestSlot = nil
-    for _, slot in ipairs(slots) do
-        local volume = getEggSize(slot)
-        if volume >= 90 and volume > maxVolume then
-            maxVolume = volume
-            biggestSlot = slot
-        end
-    end
-    for _, slot in ipairs(slots) do
-        local volume, targetPart = getEggSize(slot)
-        local billboard = slot:FindFirstChild("EggSizeESP")
-        if volume < 90 then
-            if billboard then billboard:Destroy() end
-        else
-            if not billboard and targetPart then
-                billboard = Instance.new("BillboardGui")
-                billboard.Name = "EggSizeESP"
-                billboard.AlwaysOnTop = true
-                billboard.Size = UDim2.new(0, 100, 0, 40)
-                billboard.StudsOffset = Vector3.new(0, 2, 0)
-                billboard.Adornee = targetPart
-                local textLabel = Instance.new("TextLabel")
-                textLabel.Name = "Label"
-                textLabel.Size = UDim2.new(1, 0, 1, 0)
-                textLabel.BackgroundTransparency = 1
-                textLabel.TextStrokeTransparency = 0
-                textLabel.Font = Enum.Font.SourceSansBold
-                textLabel.Parent = billboard
-                billboard.Parent = slot
-            end
-            if billboard and billboard:FindFirstChild("Label") then
-                local isBiggest = (slot == biggestSlot)
-                local textLabel = billboard.Label
-                if isBiggest then
-                    textLabel.TextColor3 = COLOR_BIGGEST
-                    textLabel.TextSize = 22
-                    textLabel.Text = string.format("👑 %.1f", volume)
-                else
-                    textLabel.TextColor3 = COLOR_NORMAL
-                    textLabel.TextSize = 18
-                    textLabel.Text = string.format("%.1f", volume)
-                end
-            end
-        end
-    end
-end
-
-task.spawn(function()
-    while true do
-        pcall(updateEggESP)
-        task.wait(0.3)
-    end
-end)
-
--- 4. Multi-Part ESP System
 local function countParts(object)
     local count = object:IsA("BasePart") and 1 or 0
     for _, descendant in ipairs(object:GetDescendants()) do
@@ -273,70 +214,16 @@ local function countParts(object)
     return count
 end
 
-local function applyMultiPartESP(eggFolder)
-    if not (eggFolder:IsA("Model") or eggFolder:IsA("BasePart") or eggFolder:IsA("Folder")) then return end
-    local totalParts = countParts(eggFolder)
-    local highlight = eggFolder:FindFirstChild("EggESP_Highlight")
-    local billboard = eggFolder:FindFirstChild("EggESP_Text")
-    if totalParts < MIN_PARTS_COUNT then
-        if highlight then highlight:Destroy() end
-        if billboard then billboard:Destroy() end
-        return
-    end
-    if not highlight then
-        highlight = Instance.new("Highlight")
-        highlight.Name = "EggESP_Highlight"
-        highlight.FillColor = Color3.fromRGB(255, 85, 0)
-        highlight.FillTransparency = 0.3
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.OutlineTransparency = 0
-        highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-        highlight.Parent = eggFolder
-    end
-    if not billboard then
-        billboard = Instance.new("BillboardGui")
-        billboard.Name = "EggESP_Text"
-        billboard.AlwaysOnTop = true
-        billboard.Size = UDim2.new(0, 180, 0, 35)
-        billboard.StudsOffset = Vector3.new(0, 3.5, 0)
-        local nameLabel = Instance.new("TextLabel")
-        nameLabel.Name = "Label"
-        nameLabel.Parent = billboard
-        nameLabel.Size = UDim2.new(1, 0, 1, 0)
-        nameLabel.BackgroundTransparency = 1
-        nameLabel.Text = string.format("🔥 %s\n[%d Parts]", eggFolder.Name, totalParts)
-        nameLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-        nameLabel.TextStrokeTransparency = 0
-        nameLabel.TextSize = 14
-        nameLabel.Font = Enum.Font.SourceSansBold
-        local targetPart = eggFolder:IsA("BasePart") and eggFolder or eggFolder:FindFirstChildWhichIsA("BasePart", true)
-        if targetPart then
-            billboard.Adornee = targetPart
-            billboard.Parent = eggFolder
-        end
-    end
-end
-
-task.spawn(function()
-    local areaEggSlotsClient = Workspace:WaitForChild("AreaEggSlotsClient", 15)
-    if not areaEggSlotsClient then return end
-    while task.wait(0.5) do
-        for _, egg in ipairs(areaEggSlotsClient:GetChildren()) do
-            pcall(applyMultiPartESP, egg)
-        end
-    end
-end)
-
 -- 5. Priority Auto-Farm System & Treadmill System
 task.spawn(function()
     local areaEggSlotsClient = Workspace:WaitForChild("AreaEggSlotsClient")
     local objects = Workspace:WaitForChild("__OBJECTS", 5)
     local areas = objects and objects:WaitForChild("Areas", 5)
     local guardAreas = areas and areas:WaitForChild("GuardAreas", 5)
-    local SPEED = 600
+    
     local FLY_OFFSET_HEIGHT = 3
     local HEIGHT_OFFSET = 1.5
-    local MAX_PROXIMITY_DIST = 2
+    local MAX_PROXIMITY_DIST = 10
     local WAIT_AT_BASE = 1
 
     local function getGroundYForPosition(targetPosition)
@@ -375,7 +262,7 @@ task.spawn(function()
 
     local function getTweenInfo(startCF, targetCF)
         local dist = (startCF.Position - targetCF.Position).Magnitude
-        local duration = dist / SPEED
+        local duration = dist / getgenv().FlySpeed 
         return TweenInfo.new(math.max(duration, 0.1), Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
     end
 
@@ -403,57 +290,186 @@ task.spawn(function()
         end
     end
 
-    local function stealEggAtLocation(hitbox)
-        local hrp = getHRP()
-        if not hrp or not hitbox then return end
-        hrp.Anchored = false
-        hrp.AssemblyLinearVelocity = Vector3.zero
-        tweenToCheckpointFirst(hrp, SPEED)
-        local targetPos = hitbox.Position
-        local groundY = getGroundYForPosition(targetPos)
-        local flyY = groundY + FLY_OFFSET_HEIGHT
-        local collectTargetCF = CFrame.new(targetPos.X, targetPos.Y + HEIGHT_OFFSET, targetPos.Z) * hitbox.CFrame.Rotation
-        local highTargetCF = CFrame.new(targetPos.X, flyY, targetPos.Z) * hitbox.CFrame.Rotation
-        
-        local tweenFlyTo = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highTargetCF), {CFrame = highTargetCF})
-        tweenFlyTo:Play()
-        tweenFlyTo.Completed:Wait()
-        
-        local tweenDownToEgg = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, collectTargetCF), {CFrame = collectTargetCF})
-        tweenDownToEgg:Play()
-        tweenDownToEgg.Completed:Wait()
-        
-        hrp.Anchored = true
-        hrp.CFrame = collectTargetCF
-        task.wait(0.5)
-        interactNearbyPrompts()
-        task.wait(5)
-        interactNearbyPrompts()
-        task.wait(0.4)
-        
-        hrp = getHRP()
-        if not hrp then return end
-        hrp.Anchored = false
-        
-        local tweenBackUp = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highTargetCF), {CFrame = highTargetCF})
-        tweenBackUp:Play()
-        tweenBackUp.Completed:Wait()
-        
-        local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
-        tweenFlyBack:Play()
-        tweenFlyBack.Completed:Wait()
-        task.wait(WAIT_AT_BASE)
+    -- =========================================
+    -- Function: ទាញយកទីតាំងកណ្តាលរបស់សំបុក Lake
+    -- =========================================
+    local function getLakeNestCenter()
+        local lakeNests = Workspace:FindFirstChild("__OBJECTS") 
+            and Workspace.__OBJECTS:FindFirstChild("Areas") 
+            and Workspace.__OBJECTS.Areas:FindFirstChild("GuardAreas")
+            and Workspace.__OBJECTS.Areas.GuardAreas:FindFirstChild("Lake")
+            and Workspace.__OBJECTS.Areas.GuardAreas.Lake:FindFirstChild("Nests")
+
+        if lakeNests then
+            -- យកសំបុកទី១ដែលវាលោតចេញមក
+            for _, nest in ipairs(lakeNests:GetChildren()) do
+                local nestPart = nest:IsA("BasePart") and nest or (nest.PrimaryPart or nest:FindFirstChildWhichIsA("BasePart", true))
+                if nestPart then
+                    return nestPart
+                end
+            end
+        end
+        return nil
     end
 
-    -- ===== Logic ស្វែងរកស៊ុត (លុប Monster Egg ចេញ) =====
+    -- =========================================
+    -- Function: ឆែកមើលថាតើតួអង្គកំពុងកាន់ស៊ុតឬនៅ?
+    -- =========================================
+    local function isHoldingEgg()
+        local char = player.Character
+        if char then
+            -- ឆែកមើលក្រែងលោវាជា Tool កាន់នៅនឹងដៃ
+            if char:FindFirstChildWhichIsA("Tool") then return true end
+            -- ឆែកមើលក្រែងលោវាជា Model ដែលជាប់នឹងខ្នង ឬដៃ
+            for _, v in ipairs(char:GetChildren()) do
+                if string.find(string.lower(v.Name), "egg") then return true end
+            end
+        end
+        
+        -- ឆែកមើលក្នុងកាបូប (Backpack) ក្រែងលោវាចូលទីនោះ
+        local backpack = player:FindFirstChild("Backpack")
+        if backpack then
+            if backpack:FindFirstChildWhichIsA("Tool") then return true end
+            for _, v in ipairs(backpack:GetChildren()) do
+                if string.find(string.lower(v.Name), "egg") then return true end
+            end
+        end
+        return false
+    end
+
+    -- =========================================
+    -- Function: ទម្រង់លួចស៊ុត (Steal Egg) ថ្មីបំផុត
+    -- =========================================
+    local function stealEggAtLocation(targetSlot)
+        local hrp = getHRP()
+        if not hrp or not targetSlot then return end
+        hrp.Anchored = false
+        hrp.AssemblyLinearVelocity = Vector3.zero
+
+        tweenToCheckpointFirst(hrp, getgenv().FlySpeed)
+
+        local guardAreasObj = Workspace:FindFirstChild("__OBJECTS") 
+            and Workspace.__OBJECTS:FindFirstChild("Areas") 
+            and Workspace.__OBJECTS.Areas:FindFirstChild("GuardAreas")
+        local lakeArea = guardAreasObj and guardAreasObj:FindFirstChild("Lake")
+        local lakeGuard = lakeArea and lakeArea:FindFirstChild("Guard")
+        local lakeGuardHumanoid = lakeGuard and lakeGuard:FindFirstChild("Humanoid")
+
+        -- ជំហានទី១៖ ទៅកាន់កណ្តាលសំបុក Lake ហើយចុចព្រាវៗរហូតដល់មាន Egg នៅនឹងដៃ
+        local lakeNestPart = getLakeNestCenter()
+        if lakeNestPart then
+            local nestPos = lakeNestPart.Position
+            local fGroundY = getGroundYForPosition(nestPos)
+            local fFlyY = fGroundY + FLY_OFFSET_HEIGHT
+            local fCollectCF = CFrame.new(nestPos.X, nestPos.Y + HEIGHT_OFFSET, nestPos.Z) * hrp.CFrame.Rotation
+            local fHighCF = CFrame.new(nestPos.X, fFlyY, nestPos.Z) * hrp.CFrame.Rotation
+
+            -- ហោះទៅពីលើសំបុក
+            local tFlyF = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, fHighCF), {CFrame = fHighCF})
+            tFlyF:Play() 
+            tFlyF.Completed:Wait()
+
+            -- ចុះមកកណ្តាលសំបុក
+            local tDownF = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, fCollectCF), {CFrame = fCollectCF})
+            tDownF:Play() 
+            tDownF.Completed:Wait()
+
+            hrp.Anchored = true
+            hrp.CFrame = fCollectCF
+            
+            -- Loop ចុចព្រាវរហូតទាល់តែបានកាន់ស៊ុត (ដាក់ Timeout ៣០ដង ការពារគាំងរហូត)
+            local attempts = 0
+            while not isHoldingEgg() and attempts < 30 do
+                interactNearbyPrompts()
+                task.wait(0.2)
+                attempts = attempts + 1
+            end
+
+            hrp.Anchored = false
+
+            -- ហោះឡើងវិញ
+            local tUpF = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, fHighCF), {CFrame = fHighCF})
+            tUpF:Play() 
+            tUpF.Completed:Wait()
+        end
+
+        -- ជំហានទី២៖ ហោះទៅបុក Guard (បន្ទាប់ពីបានស៊ុតរួច)
+        if lakeGuardHumanoid then
+            local guardPos, guardCF
+            local rootPart = lakeGuardHumanoid.RootPart or (lakeGuardHumanoid.Parent and lakeGuardHumanoid.Parent:FindFirstChild("HumanoidRootPart"))
+            
+            if rootPart then
+                guardCF = rootPart.CFrame
+                guardPos = rootPart.Position
+            elseif lakeGuardHumanoid.Parent and lakeGuardHumanoid.Parent:IsA("Model") then
+                guardCF = lakeGuardHumanoid.Parent:GetPivot()
+                guardPos = guardCF.Position
+            end
+
+            if guardPos and guardCF then
+                local flyY = getGroundYForPosition(guardPos) + FLY_OFFSET_HEIGHT
+                local highGuardCF = CFrame.new(guardPos.X, flyY, guardPos.Z)
+
+                local tFlyG = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highGuardCF), {CFrame = highGuardCF})
+                tFlyG:Play() 
+                tFlyG.Completed:Wait()
+
+                local tDownG = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, guardCF), {CFrame = guardCF})
+                tDownG:Play() 
+                tDownG.Completed:Wait()
+
+                task.wait(0.5)
+
+                local tUpG = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highGuardCF), {CFrame = highGuardCF})
+                tUpG:Play() 
+                tUpG.Completed:Wait()
+            end
+        end
+
+        -- ជំហានទី៣៖ ទៅយកស៊ុតគោលដៅពិតប្រាកដ
+        local targetHitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
+        if targetHitbox and targetHitbox.Parent and targetHitbox:IsDescendantOf(Workspace) then
+            local targetPos = targetHitbox.Position
+            local groundY = getGroundYForPosition(targetPos)
+            local flyY = groundY + FLY_OFFSET_HEIGHT
+            local collectTargetCF = CFrame.new(targetPos.X, targetPos.Y + HEIGHT_OFFSET, targetPos.Z) * targetHitbox.CFrame.Rotation
+            local highTargetCF = CFrame.new(targetPos.X, flyY, targetPos.Z) * targetHitbox.CFrame.Rotation
+
+            local tweenFlyToEgg = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highTargetCF), {CFrame = highTargetCF})
+            tweenFlyToEgg:Play() 
+            tweenFlyToEgg.Completed:Wait()
+
+            local tweenDownToEgg = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, collectTargetCF), {CFrame = collectTargetCF})
+            tweenDownToEgg:Play() 
+            tweenDownToEgg.Completed:Wait()
+
+            hrp.Anchored = true
+            hrp.CFrame = collectTargetCF
+            task.wait(0.1)
+            interactNearbyPrompts()
+            task.wait(0.1)
+            hrp.Anchored = false
+
+            local tweenBackUp = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, highTargetCF), {CFrame = highTargetCF})
+            tweenBackUp:Play() 
+            tweenBackUp.Completed:Wait()
+        end
+
+        -- ជំហានទី៤៖ ត្រលប់មក Base វិញ
+        local tweenFlyBack = TweenService:Create(hrp, getTweenInfo(hrp.CFrame, originalCFrame), {CFrame = originalCFrame})
+        tweenFlyBack:Play() 
+        tweenFlyBack.Completed:Wait()
+
+        task.wait(WAIT_AT_BASE)
+    end
+    -- =========================================
+
     local function getTargetEgg()
         local slots = areaEggSlotsClient:GetChildren()
 
         if getgenv().AutoRainbowEgg then
             for _, slot in ipairs(slots) do
-                if isRainbowEgg(slot) then
-                    return slot
-                end
+                if isRainbowEgg(slot) then return slot end
             end
         end
 
@@ -467,9 +483,7 @@ task.spawn(function()
                     bestPartEgg = slot
                 end
             end
-            if bestPartEgg then
-                return bestPartEgg
-            end
+            if bestPartEgg then return bestPartEgg end
         end
 
         if getgenv().AutoBigEgg then
@@ -482,9 +496,7 @@ task.spawn(function()
                     bestBigEgg = slot
                 end
             end
-            if bestBigEgg then
-                return bestBigEgg
-            end
+            if bestBigEgg then return bestBigEgg end
         end
 
         if getgenv().AutoInteract then
@@ -499,34 +511,28 @@ task.spawn(function()
         return nil
     end
 
-    -- ===== Logic លាក់និងបង្ហាញ Humanoid បែប Copy&Paste ថ្មី =====
     local storedHumanoid = nil
-
     local function removeHumanoid()
         local char = player.Character
         if char then
             local hum = char:FindFirstChild("Humanoid")
             if hum then
                 hum:UnequipTools()
-                storedHumanoid = hum     -- រក្សាទុក Humanoid ដើមទាំងមូល
-                hum.Parent = nil         -- ដកវាចេញពី Character តែមិនលុប (Destroy) វាចោលទេ
+                storedHumanoid = hum
+                hum.Parent = nil
             end
         end
     end
-
     local function restoreHumanoid()
         local char = player.Character
-        -- ឆែកមើលបើសិនជា Character អត់ទាន់មាន Humanoid ហើយយើងមានទុកអាដើម
         if char and not char:FindFirstChild("Humanoid") and storedHumanoid then
-            storedHumanoid.Parent = char -- យក Humanoid ដើម ១០០% មកដាក់ចូលវិញ
-            workspace.CurrentCamera.CameraSubject = storedHumanoid -- តម្រង់កាមេរ៉ាទៅវាវិញ
-            storedHumanoid = nil         -- សម្អាតទិន្នន័យបន្ទាប់ពីដាក់ចូលវិញរួចរាល់
+            storedHumanoid.Parent = char
+            workspace.CurrentCamera.CameraSubject = storedHumanoid
+            storedHumanoid = nil
         end
     end
 
-    -- =========================================
-    -- ប្រព័ន្ធ Treadmill (ម៉ាស៊ីនរត់) ពេលទំនេរ
-    -- =========================================
+    -- Treadmill System
     local TWEEN_SPEED_TREADMILL = 100
     local HIP_OFFSET = 3
     local isCurrentlyOnTreadmill = false
@@ -588,9 +594,7 @@ task.spawn(function()
 
     local function leaveTreadmill()
         local askDoffRemote = nil
-        pcall(function()
-            askDoffRemote = ReplicatedStorage.Packages.Networking:FindFirstChild("RF/Treadmill/AskDoff")
-        end)
+        pcall(function() askDoffRemote = ReplicatedStorage.Packages.Networking:FindFirstChild("RF/Treadmill/AskDoff") end)
         if askDoffRemote and askDoffRemote:IsA("RemoteFunction") then
             pcall(function() askDoffRemote:InvokeServer() end)
         end
@@ -598,23 +602,18 @@ task.spawn(function()
         if hrp then hrp.Anchored = false end
     end
 
-    -- =========================================
     -- Main Loop
-    -- =========================================
     while true do
         if isWallOpenOrCountdownFinished() then
             local targetSlot = getTargetEgg()
             if targetSlot then
-                local hitbox = targetSlot:FindFirstChild("Hitbox", true) or (targetSlot:IsA("BasePart") and targetSlot) or targetSlot:FindFirstChildWhichIsA("BasePart", true)
-                if hitbox then
-                    if isCurrentlyOnTreadmill then
-                        leaveTreadmill()
-                        isCurrentlyOnTreadmill = false
-                        task.wait(0.5)
-                    end
-                    removeHumanoid()
-                    stealEggAtLocation(hitbox)
+                if isCurrentlyOnTreadmill then
+                    leaveTreadmill()
+                    isCurrentlyOnTreadmill = false
+                    task.wait(0.5)
                 end
+                removeHumanoid()
+                stealEggAtLocation(targetSlot) 
             else
                 restoreHumanoid()
                 if getgenv().AutoTreadmill then
@@ -662,19 +661,12 @@ local window = Rayfield:CreateWindow({
 })
 
 local tab = window:CreateTab("Farm", 4483362458)
-local tab1 = window:CreateTab("Event", 4483362458)
 
 Rayfield:Notify({
     Title = "----ហាមចុចបើកអីទាំងអស់----\n!រង់ចាំបន្តិចសិន!",
     Content = "មិនទាន់លេងបានទេចាំអោយប្រព័ន្ធដំណើរការចប់សិន\nហាមចុចបើកមុខងារអីទាំងអស់",
     Duration = 10,
     Image = 4483362458,
-    Actions = {
-        Ignored = {
-            Name = "យល់ព្រម!",
-            Callback = function() end
-        },
-    },
 })
 
 tab:CreateDropdown({
@@ -683,54 +675,52 @@ tab:CreateDropdown({
     CurrentOption = selectedModules,
     MultipleOptions = true,
     Flag = "AreaDropdown",
-    Callback = function(selected)
-        selectedModules = selected
-    end,
+    Callback = function(selected) selectedModules = selected end,
+})
+
+tab:CreateSlider({
+    Name = '<font size="24"><b>កំណត់ល្បឿនហោះ</b></font>(Fly Speed)',
+    Range = {600, 800},
+    Increment = 10,
+    Suffix = " Speed",
+    CurrentValue = 600,
+    Flag = "FlySpeedSlider", 
+    Callback = function(Value) getgenv().FlySpeed = Value end,
 })
 
 tab:CreateToggle({
     Name = '<font size="24"><b>លួចតែស៊ុតនៅទីតាំងដែរបានជ្រើសរើស</b></font>(Select)',
     CurrentValue = false,
     Flag = "steal_dropdown",
-    Callback = function(value)
-        getgenv().AutoInteract = value
-    end,
+    Callback = function(value) getgenv().AutoInteract = value end,
 })
 
 tab:CreateToggle({
     Name = '<font size="24"><b>លួចតែស៊ុតធំៗ</b></font>(Steal Big Egg)',
     CurrentValue = false,
     Flag = "steal_bigeggs",
-    Callback = function(value)
-        getgenv().AutoBigEgg = value
-    end,
+    Callback = function(value) getgenv().AutoBigEgg = value end,
 })
 
 tab:CreateToggle({
     Name = '<font size="24"><b>លួចស៊ុត៧ពណ៏</b></font>(Rainbow, Devine)',
     CurrentValue = false,
     Flag = "auto_rainbow_egg",
-    Callback = function(value)
-        getgenv().AutoRainbowEgg = value
-    end,
+    Callback = function(value) getgenv().AutoRainbowEgg = value end,
 })
 
 tab:CreateToggle({
     Name = '<font size="24"><b>លួចស៊ុតដែលមានស្លាប</b></font>(MASSIVE EGGS)',
     CurrentValue = false,
     Flag = "auto_part_farm",
-    Callback = function(value)
-        getgenv().AutoPartFarm = value
-    end,
+    Callback = function(value) getgenv().AutoPartFarm = value end,
 })
 
 tab:CreateToggle({
     Name = '<font size="24"><b>រត់លើម៉ាស៊ីនពេលទំនេរ</b></font>(Auto Treadmill)',
     CurrentValue = false,
     Flag = "auto_treadmill",
-    Callback = function(value)
-        getgenv().AutoTreadmill = value
-    end,
+    Callback = function(value) getgenv().AutoTreadmill = value end,
 })
 
 tab:CreateToggle({
@@ -739,12 +729,8 @@ tab:CreateToggle({
     Flag = "Optimization",
     Callback = function(value)
         if value then
-            for _, v in pairs(Workspace:GetDescendants()) do
-                pcall(optimizeObject, v)
-            end
-            Workspace.DescendantAdded:Connect(function(v)
-                pcall(optimizeObject, v)
-            end)
+            for _, v in pairs(Workspace:GetDescendants()) do pcall(optimizeObject, v) end
+            Workspace.DescendantAdded:Connect(function(v) pcall(optimizeObject, v) end)
             Lighting.GlobalShadows = false
             Lighting.FogEnd = 9e9
             Lighting.Brightness = 0
