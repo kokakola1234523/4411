@@ -1,6 +1,3 @@
--- ==========================================
--- ផ្នែកទី ១៖ Utility & Anti-Cheat Bypass
--- ==========================================
 local utility = {
     RunService = game:GetService("RunService"),
     Players = game:GetService("Players")
@@ -88,44 +85,3 @@ function utility:initbypass()
 end
 
 utility:initbypass()
-
-
--- ==========================================
--- ផ្នែកទី ២៖ Auto Character & Humanoid Handler (Respawn Fix)
--- ==========================================
-local player = utility.Players.LocalPlayer
-local char, hum, hrp
-
-local function setupCharacter(newChar)
-    char = newChar
-    hum = newChar:WaitForChild("Humanoid")
-    hrp = newChar:WaitForChild("HumanoidRootPart")
-    
-    hum.Died:Connect(function()
-        hum = nil
-        hrp = nil
-    end)
-end
-
-if player.Character then
-    setupCharacter(player.Character)
-end
-
-player.CharacterAdded:Connect(setupCharacter)
-
--- Function ជំនួយសម្រាប់ទាញយកតម្លៃថ្មីពេល Loop យកទៅប្រើ
-local function getHRP()
-    local character = player.Character
-    if character then
-        return character:FindFirstChild("HumanoidRootPart")
-    end
-    return nil
-end
-
-local function getHumanoid()
-    local character = player.Character
-    if character then
-        return character:FindFirstChildOfClass("Humanoid")
-    end
-    return nil
-end
