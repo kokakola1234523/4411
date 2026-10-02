@@ -76,11 +76,17 @@ function utility:initbypass()
 
     local hookedfunc3; hookedfunc3 = self.safehook(v7, function(p1, p2)
         if p2 and typeof(p2) == "table" then
-            -- [កន្លែងកែប្រែ]៖ ដោះសោរ Table មុននឹងកែប្រែ Metatable របស់វា
+            -- ១. ដោះសោរ Table ដើម្បី Bypass Anti-Cheat (ការពារកុំឲ្យលោត Error ក្រហម)
             if setreadonly then 
                 setreadonly(p2, false) 
             end
-            setmetatable(p2, {})
+            
+            -- ២. បញ្ចូល Arguments ក្លែងក្លាយឲ្យហ្គេមអាន (ការពារកុំឲ្យលោត Warning លឿង)
+            if p2.Arguments == nil then
+                pcall(function() p2.Arguments = {} end)
+            end
+            
+            -- ៣. យើងលុបកូដ setmetatable(p2, {}) ចោល ដើម្បីកុំឲ្យហ្គេមខូចរចនាសម្ព័ន្ធដើម
         end
         return hookedfunc3(p1,p2)
     end)
