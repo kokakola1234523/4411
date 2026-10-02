@@ -76,6 +76,10 @@ function utility:initbypass()
 
     local hookedfunc3; hookedfunc3 = self.safehook(v7, function(p1, p2)
         if p2 and typeof(p2) == "table" then
+            -- [កន្លែងកែប្រែ]៖ ដោះសោរ Table មុននឹងកែប្រែ Metatable របស់វា
+            if setreadonly then 
+                setreadonly(p2, false) 
+            end
             setmetatable(p2, {})
         end
         return hookedfunc3(p1,p2)
